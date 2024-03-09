@@ -1,50 +1,85 @@
-# Для подключение библиотеки telebot нужно в google colab добавить: !pip install pyTelegramBotAPI
 from telebot import TeleBot, types
 import json
+import sys
 
-bot = TeleBot(token='MY_TOKEN', parse_mode='html') # создание бота
+bot = TeleBot(token='6565554022:AAGSEH0gFLzRd_3hbRiYke0qnBiMCkvEwUI', parse_mode='html')
 
+def generate_start_message():
+    markup = types.InlineKeyboardMarkup()
+    restart_button = types.InlineKeyboardButton("Перезапустить", callback_data='restart')
+    stop_button = types.InlineKeyboardButton("Остановить", callback_data='stop')
+    markup.add(restart_button, stop_button)
 
-# обработчик команды '/start'
+    return 'Привет! Я умею проверять JSON и форматировать его в красивый текст. Введи JSON в виде строки или отправь файл с JSON:', markup
+
 @bot.message_handler(commands=['start'])
 def start_command_handler(message: types.Message):
-    # отправляем ответ на команду '/start'
-    bot.send_message(
-        chat_id=message.chat.id, # id чата, в который необходимо направить сообщение
-        text='Привет! Я умею проверять JSON и форматировать его в красивый текст\nВведи JSON в виде строки:', # текст сообщения
-    )
-
-# обработчик всех остальных сообщений
-@bot.message_handler()
-def message_handler(message: types.Message):
-    try:
-        # пытаемся распарсить JSON из текста сообщения
-        payload = json.loads(message.text)
-    except json.JSONDecodeError as ex:
-        # при ошибке взникнет исключение 'json.JSONDecodeError'
-        # преобразовываем исключение в строку и выводим пользователю
-        bot.send_message(
-            chat_id=message.chat.id,
-            text=f'При обработке произошла ошибка:\n<code>{str(ex)}</code>'
-        )
-        # выходим из функции
-        return
-    
-    # если исключения не возникло - значит был введен корректный JSON
-    # форматируем его в красивый текст :) (отступ 2 пробела на уровень, сортировать ключи по алфавиту)
-    text = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
-    # и выводим пользователю
+    text, markup = generate_start_message()
     bot.send_message(
         chat_id=message.chat.id,
-        text=f'JSON:\n<code>{text}</code>'
+        text=text,
+        reply_markup=markup
     )
 
+@bot.message_handler(func=lambda message: True)
+def message_handler(message: types.Message):
+    try:
+        if message.document or message.photo or message.video or message.voice or message.audio or message.sticker or message.animation or message.video_note or message.contact or message.location or message.venue or message.dice:
+            handle_file(message)
+            return
 
-# главная функция программы
+        payload = json.loads(message.text)
+        text = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
+        
+        # Добавлено сообщение об успешной обработке кода JSON
+        bot.send_message(
+            chat_id=message.chat.id,
+            text=f'JSON успешно проверен и отформатирован:\n<code>{text}</code>'
+        )
+    except json.JSONDecodeError:
+        # Стикер при ошибке распознавания JSON-кода
+        bot.send_sticker(message.chat.id, 'CAACAgIAAxkBAAED_tdl7PHIkltFyCnwOH1jvXU7e2W-swAC9AADVp29ChFYsPXZ_VVJNAQ')
+        # Сообщение об ошибке, если JSON-код не может быть распознан
+        bot.send_message(
+            chat_id=message.chat.id,
+            text='Ошибка! Невозможно распознать JSON-код. Пожалуйста, убедитесь, что код введен корректно.'
+        )
+    except Exception as e:
+        # Сообщение об ошибке в случае других ошибок
+        bot.send_message(
+            chat_id=message.chat.id,
+            text=f'Произошла ошибка при обработке запроса: {str(e)}'
+        )
+
+def handle_file(message: types.Message):
+    # Сообщение об ошибке при отправке файла
+    bot.send_message(
+        chat_id=message.chat.id,
+        text='Извините, в данном боте не предусмотрена обработка файлов. Пожалуйста, отправьте JSON в виде строки текста.'
+    )
+
+@bot.callback_query_handler(func=lambda call: call.data == 'restart')
+def handle_restart(call: types.CallbackQuery):
+    # ваш код обработки команды restart
+    bot.send_sticker(call.message.chat.id, 'CAACAgIAAxkBAAED_qhl7OhYcbq65VLyLtFCzTwHEp5HtAACAgEAAladvQpO4myBy0Dk_zQE')  # отправка нового стикера
+    bot.send_message(
+        chat_id=call.message.chat.id,
+        text='Бот был перезапущен!'
+    )
+    pass  # этот pass всегда можно заменить реальным кодом
+
+@bot.callback_query_handler(func=lambda call: call.data == 'stop')
+def handle_stop(call: types.CallbackQuery):
+    bot.send_sticker(call.message.chat.id, 'CAACAgIAAxkBAAED_pxl7OQjfvnoDPpYaYzmF8l_46wgWwACDgEAAladvQoRqS1ownHgaDQE')  # отправка стикера
+    bot.send_message(
+        chat_id=call.message.chat.id,
+        text='Бот был остановлен.'
+    )
+    # Завершаем выполнение программы
+    sys.exit()
+
 def main():
-    # запускаем нашего бота
     bot.infinity_polling()
-
 
 if __name__ == '__main__':
     main()
