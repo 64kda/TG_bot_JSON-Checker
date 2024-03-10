@@ -2,7 +2,7 @@ from telebot import TeleBot, types
 import json
 import sys
 
-bot = TeleBot(token='6565554022:AAGSEH0gFLzRd_3hbRiYke0qnBiMCkvEwUI', parse_mode='html')
+bot = TeleBot(token='MY_TOKEN', parse_mode='html')
 
 def generate_start_message():
     markup = types.InlineKeyboardMarkup()
